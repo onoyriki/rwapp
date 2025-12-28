@@ -1,0 +1,7 @@
+{
+  "name": "Sistem Pendataan Warga (SIM-RW)",
+  "description": "A comprehensive resident data management system for RW and RT administrators with AI-powered demographic analysis.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

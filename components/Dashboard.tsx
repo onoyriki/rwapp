@@ -1,25 +1,58 @@
 
 import React from 'react';
 import { Resident, DashboardStats, Gender, ResidentStatus } from '../types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 
 interface DashboardProps {
   residents: Resident[];
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ residents }) => {
-  const stats: DashboardStats = React.useMemo(() => {
+  const stats = React.useMemo(() => {
     const rts = new Set(residents.map(r => r.rt_number));
     const male = residents.filter(r => r.gender === Gender.MALE).length;
     const female = residents.filter(r => r.gender === Gender.FEMALE).length;
     const permanent = residents.filter(r => r.status === ResidentStatus.PERMANENT).length;
     const temporary = residents.filter(r => r.status === ResidentStatus.TEMPORARY).length;
 
+    // Distribusi Usia
+    const now = new Date();
+    const ageGroups = {
+      '0-12 (Anak)': 0,
+      '13-18 (Remaja)': 0,
+      '19-59 (Dewasa)': 0,
+      '60+ (Lansia)': 0
+    };
+
+    residents.forEach(r => {
+      const birth = new Date(r.birth_date);
+      let age = now.getFullYear() - birth.getFullYear();
+      const m = now.getMonth() - birth.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+
+      if (age <= 12) ageGroups['0-12 (Anak)']++;
+      else if (age <= 18) ageGroups['13-18 (Remaja)']++;
+      else if (age <= 59) ageGroups['19-59 (Dewasa)']++;
+      else ageGroups['60+ (Lansia)']++;
+    });
+
+    // Distribusi Pekerjaan
+    const occupationCounts: Record<string, number> = {};
+    residents.forEach(r => {
+      const occ = r.occupation || 'Tidak Bekerja';
+      occupationCounts[occ] = (occupationCounts[occ] || 0) + 1;
+    });
+
     return {
       totalResidents: residents.length,
       totalRTs: rts.size,
       genderDistribution: { male, female },
-      statusDistribution: { permanent, temporary }
+      statusDistribution: { permanent, temporary },
+      ageDistribution: Object.entries(ageGroups).map(([name, value]) => ({ name, value })),
+      occupationDistribution: Object.entries(occupationCounts)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5) // Ambil top 5 pekerjaan
     };
   }, [residents]);
 
@@ -42,7 +75,7 @@ const Dashboard: React.FC<DashboardProps> = ({ residents }) => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard 
@@ -71,36 +104,77 @@ const Dashboard: React.FC<DashboardProps> = ({ residents }) => {
         />
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        {/* Distribusi Per RT */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Distribusi Per RT</h3>
-          <div className="h-64">
+          <h3 className="text-lg font-semibold mb-6 text-slate-800">Populasi per RT</h3>
+          <div className="h-72">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rtDistribution}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                <Tooltip 
+                  cursor={{fill: '#f8fafc'}}
+                  contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                />
+                <Bar dataKey="count" fill="#4f46e5" radius={[6, 6, 0, 0]} barSize={40} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        {/* Distribusi Usia */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-6 text-slate-800">Distribusi Kelompok Usia</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.ageDistribution} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                <XAxis type="number" hide />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={120} tick={{fill: '#64748b', fontSize: 11}} />
+                <Tooltip 
+                   cursor={{fill: '#f8fafc'}}
+                   contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[0, 6, 6, 0]} barSize={30} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Top 5 Pekerjaan */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <h3 className="text-lg font-semibold mb-6 text-slate-800">Top 5 Pekerjaan Dominan</h3>
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={stats.occupationDistribution}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                <Tooltip 
+                   contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                />
+                <Bar dataKey="value" fill="#06b6d4" radius={[6, 6, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Ringkasan Gender & Status */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
-            <h3 className="text-sm font-semibold mb-4">Gender</h3>
-            <div className="h-40 w-full">
+            <h3 className="text-sm font-semibold mb-4 text-slate-700">Proporsi Gender</h3>
+            <div className="h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={genderData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={40}
-                    outerRadius={60}
-                    paddingAngle={5}
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={8}
                     dataKey="value"
                   >
                     {genderData.map((entry, index) => (
@@ -108,31 +182,24 @@ const Dashboard: React.FC<DashboardProps> = ({ residents }) => {
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend verticalAlign="bottom" height={36}/>
                 </PieChart>
               </ResponsiveContainer>
-            </div>
-            <div className="mt-2 space-y-1">
-              {genderData.map(d => (
-                <div key={d.name} className="flex items-center gap-2 text-xs">
-                  <div className="w-2 h-2 rounded-full" style={{backgroundColor: d.color}}></div>
-                  <span>{d.name}: {d.value}</span>
-                </div>
-              ))}
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
-            <h3 className="text-sm font-semibold mb-4">Status</h3>
-            <div className="h-40 w-full">
+            <h3 className="text-sm font-semibold mb-4 text-slate-700">Status Hunian</h3>
+            <div className="h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={statusData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={40}
-                    outerRadius={60}
-                    paddingAngle={5}
+                    innerRadius={50}
+                    outerRadius={70}
+                    paddingAngle={8}
                     dataKey="value"
                   >
                     {statusData.map((entry, index) => (
@@ -140,16 +207,9 @@ const Dashboard: React.FC<DashboardProps> = ({ residents }) => {
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend verticalAlign="bottom" height={36}/>
                 </PieChart>
               </ResponsiveContainer>
-            </div>
-             <div className="mt-2 space-y-1">
-              {statusData.map(d => (
-                <div key={d.name} className="flex items-center gap-2 text-xs">
-                  <div className="w-2 h-2 rounded-full" style={{backgroundColor: d.color}}></div>
-                  <span>{d.name}: {d.value}</span>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -159,7 +219,7 @@ const Dashboard: React.FC<DashboardProps> = ({ residents }) => {
 };
 
 const StatCard: React.FC<{ title: string; value: string; icon: React.ReactNode; color: string }> = ({ title, value, icon, color }) => (
-  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
     <div className="flex justify-between items-start">
       <div>
         <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>

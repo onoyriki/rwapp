@@ -3,7 +3,6 @@ import { UserAccount, Role } from '../types';
 
 const USERS_KEY = 'sim_rw_users_db';
 
-// User awal (Admin RW bawaan)
 const INITIAL_USERS: UserAccount[] = [
   {
     id: 'admin-rw-id',
@@ -25,23 +24,27 @@ export const authService = {
     return JSON.parse(data);
   },
 
-  // Simulasi Login Google
-  loginWithGoogle: async (email: string, name: string): Promise<UserAccount> => {
+  loginWithGoogle: async (email: string, name: string, picture?: string): Promise<UserAccount> => {
     const users = authService.getUsers();
     let user = users.find(u => u.email === email);
 
     if (!user) {
-      // Pendaftaran otomatis jika email belum ada
       user = {
         id: Math.random().toString(36).substr(2, 9),
         email,
         name,
-        role: 'ADMIN_RT', // Default pendaftar baru adalah RT (atau bisa disesuaikan)
-        rtNumber: '01',   // Default RT
+        role: 'ADMIN_RT',
+        rtNumber: '01',
         status: 'PENDING',
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`
+        avatar: picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff`
       };
       users.push(user);
+      localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    } else if (picture) {
+      // Update avatar jika ada foto terbaru dari Google
+      user.avatar = picture;
+      const index = users.findIndex(u => u.id === user!.id);
+      users[index] = user;
       localStorage.setItem(USERS_KEY, JSON.stringify(users));
     }
 

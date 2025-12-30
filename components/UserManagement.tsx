@@ -15,7 +15,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onVerify }) => {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100">
           <h3 className="text-lg font-semibold text-slate-800">Permintaan Akses Baru</h3>
-          <p className="text-sm text-slate-500">Daftar user yang login via Gmail dan menunggu persetujuan Anda.</p>
+          <p className="text-sm text-slate-500">Daftar user yang login via Google/Gmail dan menunggu persetujuan Anda.</p>
         </div>
         
         <div className="overflow-x-auto">
@@ -24,7 +24,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, onVerify }) => {
               <tr>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">User</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Aksi Cepat</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Aksi Verifikasi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -71,7 +71,7 @@ const PendingUserRow: React.FC<{ user: UserAccount, onVerify: any }> = ({ user, 
     <tr className="hover:bg-slate-50 transition-colors">
       <td className="px-6 py-4">
         <div className="flex items-center gap-3">
-          <img src={user.avatar} className="w-8 h-8 rounded-full" alt="" />
+          <img src={user.avatar} className="w-8 h-8 rounded-full border border-slate-200" alt="" />
           <span className="text-sm font-medium text-slate-900">{user.name}</span>
         </div>
       </td>

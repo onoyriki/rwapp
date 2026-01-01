@@ -5,10 +5,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistem Pendataan Warga (SIM-RW)</title>
+  
+  <!-- CSS Utama -->
+  <link rel="stylesheet" href="index.css">
+  
+  <!-- Tailwind & Fonts -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Babel Standalone untuk menjalankan TSX di Browser VM -->
+  <!-- Babel Standalone untuk compile TSX di browser VM -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
   <!-- Google Sign-In SDK -->
@@ -19,9 +24,6 @@
       font-family: 'Inter', sans-serif;
       background-color: #f8fafc;
     }
-    .g_id_signin iframe {
-      margin: 0 auto !important;
-    }
   </style>
 
 <script type="importmap">
@@ -29,17 +31,19 @@
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
     "react/": "https://esm.sh/react@^19.2.3/",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
+    "react-dom/client": "https://esm.sh/react-dom@^19.2.3/client",
     "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
     "recharts": "https://esm.sh/recharts@^3.6.0",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.48.1"
+    "lucide-react": "https://esm.sh/lucide-react@^0.475.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
   }
 }
 </script>
 </head>
 <body>
   <div id="root"></div>
-  <!-- Memanggil index.tsx menggunakan Babel agar diproses sebagai module -->
+  <!-- Gunakan data-plugins="transform-modules-umd" agar import internal antar file bekerja -->
   <script type="text/babel" data-type="module" src="index.tsx"></script>
 </body>
 </html>

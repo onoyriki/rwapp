@@ -1,25 +1,20 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { UserSession, Resident, Role, UserAccount } from './types';
-import Layout from './components/Layout';
-import Dashboard from './components/Dashboard';
-import ResidentList from './components/ResidentList';
-import AiAssistant from './components/AiAssistant';
-import UserManagement from './components/UserManagement';
-import { apiService } from './services/apiService';
+import { UserSession, Resident, Role, UserAccount } from './types.ts';
+import Layout from './components/Layout.tsx';
+import Dashboard from './components/Dashboard.tsx';
+import ResidentList from './components/ResidentList.tsx';
+import AiAssistant from './components/AiAssistant.tsx';
+import UserManagement from './components/UserManagement.tsx';
+import { apiService } from './services/apiService.ts';
 
-// ==========================================
-// KONFIGURASI VM GCP & GOOGLE LOGIN
-// ==========================================
 const GOOGLE_CLIENT_ID = "770161612412-bb7dvaebdm97ml16fgmf2r9v4nmin6u0.apps.googleusercontent.com";
 
 const getApiUrl = () => {
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   if (isLocal) {
-    // Gunakan .nip.io agar Google Auth tidak error dengan IP mentah
     return "http://34.182.35.155.nip.io/api"; 
   }
-  // Di VM, path /api/ akan diteruskan oleh Nginx ke port 5000
   return `${window.location.origin}/api`;
 };
 

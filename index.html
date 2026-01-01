@@ -40,7 +40,22 @@
 </head>
 <body>
   <div id="root"></div>
-  <!-- Tambahkan presets react dan typescript -->
-  <script type="text/babel" data-type="module" data-presets="react,typescript" src="index.tsx"></script>
+
+  <!-- Entry Point menggunakan Inline Script agar Babel pasti memprosesnya -->
+  <script type="text/babel" data-presets="react,typescript" data-type="module">
+    import React from 'react';
+    import ReactDOM from 'react-dom/client';
+    import App from './App.tsx';
+
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <React.StrictMode>
+          <App />
+        </React.StrictMode>
+      );
+    }
+  </script>
 </body>
 </html>

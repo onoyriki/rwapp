@@ -3,11 +3,14 @@
 # KONFIGURASI NGINX FINAL - ANTI 403 & ANTI MIME-TYPE
 # =======================================================
 
-# 1. Pastikan folder RW memiliki izin masuk:
+# 1. Pastikan izin folder sudah benar:
 sudo chmod 755 /home/clusterkobapwk
 sudo chmod 755 /home/clusterkobapwk/warung-app
 sudo chmod 755 /home/clusterkobapwk/warung-app/sim-rw
-sudo chmod 644 /home/clusterkobapwk/warung-app/sim-rw/*
+sudo chmod 644 /home/clusterkobapwk/warung-app/sim-rw/*.html
+sudo chmod 644 /home/clusterkobapwk/warung-app/sim-rw/*.tsx
+sudo chmod 644 /home/clusterkobapwk/warung-app/sim-rw/*.ts
+sudo chmod 644 /home/clusterkobapwk/warung-app/sim-rw/*.css
 
 # 2. Edit Config: sudo nano /etc/nginx/sites-available/default
 # GANTI ISINYA DENGAN INI:
@@ -19,17 +22,18 @@ server {
     root /home/clusterkobapwk/warung-app/sim-rw;
     index index.html;
 
-    # DEFINISI MIME TYPE MANUAL (SANGAT PENTING DI VM)
-    include /etc/nginx/mime.types;
-    types {
-        application/javascript tsx ts;
-        text/css css;
-        image/svg+xml svg;
+    # Blokir fallback ke index.html untuk file source code agar tidak terjadi SyntaxError '<'
+    location ~* \.(tsx|ts|js|jsx|css|png|jpg|jpeg|gif|ico|svg)$ {
+        try_files $uri =404;
+        
+        # Tambahkan MIME type secara manual untuk memastikan browser/Babel mau membacanya
+        if ($request_filename ~* \.(tsx|ts)$ ) {
+            add_header Content-Type application/javascript;
+        }
     }
 
     location / {
-        # Hanya lempar ke index.html jika file fisik TIDAK ADA.
-        # Jika file .tsx ada, Nginx akan mengirimkannya dengan MIME application/javascript.
+        # Hanya gunakan index.html untuk rute navigasi (bukan file fisik)
         try_files $uri $uri/ /index.html;
     }
 

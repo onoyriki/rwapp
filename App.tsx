@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import { UserSession, Resident, Role, UserAccount } from './types.ts';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Layout from './components/Layout.tsx';
 import Dashboard from './components/Dashboard.tsx';
 import ResidentList from './components/ResidentList.tsx';
@@ -20,13 +19,7 @@ const getApiUrl = () => {
 
 const API_BASE_URL = getApiUrl();
 
-declare global {
-  interface Window {
-    google: any;
-  }
-}
-
-const parseJwt = (token: string) => {
+const parseJwt = (token) => {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -39,14 +32,14 @@ const parseJwt = (token: string) => {
   }
 };
 
-const App: React.FC = () => {
-  const [session, setSession] = useState<UserSession | null>(null);
-  const [residents, setResidents] = useState<Resident[]>([]);
-  const [users, setUsers] = useState<UserAccount[]>([]);
+const App = () => {
+  const [session, setSession] = useState(null);
+  const [residents, setResidents] = useState([]);
+  const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(true);
-  const [apiError, setApiError] = useState<string | null>(null);
-  const googleBtnRef = useRef<HTMLDivElement>(null);
+  const [apiError, setApiError] = useState(null);
+  const googleBtnRef = useRef(null);
 
   useEffect(() => {
     apiService.setBaseUrl(API_BASE_URL);
@@ -61,9 +54,9 @@ const App: React.FC = () => {
         apiService.getResidents(),
         apiService.getUsers()
       ]);
-      setResidents(resData);
-      setUsers(userData);
-    } catch (err: any) {
+      setResidents(resData || []);
+      setUsers(userData || []);
+    } catch (err) {
       console.error("Koneksi API Gagal:", err);
       setApiError(err.message || "Gagal terhubung ke Backend.");
     } finally {
@@ -74,16 +67,17 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!session && !isLoading) {
       const initializeGoogle = () => {
-        if (window.google?.accounts?.id) {
+        const googleObj = window['google'];
+        if (googleObj && googleObj.accounts && googleObj.accounts.id) {
           try {
-            window.google.accounts.id.initialize({
+            googleObj.accounts.id.initialize({
               client_id: GOOGLE_CLIENT_ID, 
               callback: handleGoogleResponse,
               auto_select: false
             });
 
             if (googleBtnRef.current) {
-              window.google.accounts.id.renderButton(googleBtnRef.current, {
+              googleObj.accounts.id.renderButton(googleBtnRef.current, {
                 theme: "outline",
                 size: "large",
                 width: 320,
@@ -91,7 +85,7 @@ const App: React.FC = () => {
               });
             }
           } catch (err) {
-            console.error("Google Auth Init Error");
+            console.error("Google Auth Init Error", err);
           }
         } else {
           setTimeout(initializeGoogle, 1000);
@@ -101,7 +95,7 @@ const App: React.FC = () => {
     }
   }, [session, isLoading]);
 
-  const handleGoogleResponse = async (response: any) => {
+  const handleGoogleResponse = async (response) => {
     try {
       const userData = parseJwt(response.credential);
       if (userData) {
@@ -116,7 +110,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleVerifyUser = async (userId: string, status: 'APPROVED' | 'REJECTED', role: Role, rt: string) => {
+  const handleVerifyUser = async (userId, status, role, rt) => {
     try {
       const updatedUsers = await apiService.updateUserStatus(userId, status, role, rt);
       setUsers(updatedUsers);
@@ -130,7 +124,7 @@ const App: React.FC = () => {
     setCurrentPage('dashboard');
   };
 
-  const handleAddResident = async (data: Omit<Resident, 'id' | 'created_at'>) => {
+  const handleAddResident = async (data) => {
     try {
       const newResident = await apiService.addResident(data);
       setResidents(prev => [...prev, newResident]);
@@ -139,7 +133,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleUpdateResident = async (id: string, updates: Partial<Resident>) => {
+  const handleUpdateResident = async (id, updates) => {
     try {
       const updatedResident = await apiService.updateResident(id, updates);
       setResidents(prev => prev.map(r => r.id === id ? updatedResident : r));
@@ -148,7 +142,7 @@ const App: React.FC = () => {
     }
   };
 
-  const handleDeleteResident = async (id: string) => {
+  const handleDeleteResident = async (id) => {
     if (confirm('Hapus data warga ini secara permanen?')) {
       try {
         await apiService.deleteResident(id);
@@ -159,7 +153,7 @@ const App: React.FC = () => {
     }
   };
 
-  const filteredResidents = React.useMemo(() => {
+  const filteredResidents = useMemo(() => {
     if (!session) return [];
     if (session.role === 'ADMIN_RT') {
       return residents.filter(r => r.rt_number === session.rtNumber);
@@ -207,10 +201,6 @@ const App: React.FC = () => {
             >
               Gunakan Akses Demo (Bypass)
             </button>
-            
-            <p className="text-[10px] text-center text-slate-400">
-              Tips: Jika Error 403, pastikan Nginx memiliki izin akses folder project.
-            </p>
           </div>
         </div>
       </div>

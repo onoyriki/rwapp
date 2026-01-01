@@ -6,17 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistem Pendataan Warga (SIM-RW)</title>
   
-  <!-- CSS Utama -->
   <link rel="stylesheet" href="index.css">
   
-  <!-- Tailwind & Fonts -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- Babel Standalone untuk compile TSX di browser VM -->
+  <!-- Babel Standalone -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
-  <!-- Google Sign-In SDK -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   
   <style>
@@ -43,7 +40,7 @@
 </head>
 <body>
   <div id="root"></div>
-  <!-- Gunakan data-plugins="transform-modules-umd" agar import internal antar file bekerja -->
-  <script type="text/babel" data-type="module" src="index.tsx"></script>
+  <!-- Tambahkan presets react dan typescript -->
+  <script type="text/babel" data-type="module" data-presets="react,typescript" src="index.tsx"></script>
 </body>
 </html>

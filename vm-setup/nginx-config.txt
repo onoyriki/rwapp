@@ -1,19 +1,9 @@
 
 # =======================================================
-# KONFIGURASI NGINX FINAL - ANTI 403 & ANTI MIME-TYPE
+# KONFIGURASI NGINX FINAL - UNTUK VM TANPA BUILD STEP
 # =======================================================
 
-# 1. Pastikan izin folder sudah benar:
-sudo chmod 755 /home/clusterkobapwk
-sudo chmod 755 /home/clusterkobapwk/warung-app
-sudo chmod 755 /home/clusterkobapwk/warung-app/sim-rw
-sudo chmod 644 /home/clusterkobapwk/warung-app/sim-rw/*.html
-sudo chmod 644 /home/clusterkobapwk/warung-app/sim-rw/*.tsx
-sudo chmod 644 /home/clusterkobapwk/warung-app/sim-rw/*.ts
-sudo chmod 644 /home/clusterkobapwk/warung-app/sim-rw/*.css
-
-# 2. Edit Config: sudo nano /etc/nginx/sites-available/default
-# GANTI ISINYA DENGAN INI:
+# Simpan di: /etc/nginx/sites-available/default
 
 server {
     listen 80;
@@ -22,22 +12,24 @@ server {
     root /home/clusterkobapwk/warung-app/sim-rw;
     index index.html;
 
-    # Blokir fallback ke index.html untuk file source code agar tidak terjadi SyntaxError '<'
-    location ~* \.(tsx|ts|js|jsx|css|png|jpg|jpeg|gif|ico|svg)$ {
-        try_files $uri =404;
-        
-        # Tambahkan MIME type secara manual untuk memastikan browser/Babel mau membacanya
-        if ($request_filename ~* \.(tsx|ts)$ ) {
-            add_header Content-Type application/javascript;
-        }
+    # PENTING: Mendefinisikan MIME type .tsx sebagai skrip JavaScript
+    include /etc/nginx/mime.types;
+    types {
+        application/javascript tsx;
+        application/javascript ts;
     }
 
     location / {
-        # Hanya gunakan index.html untuk rute navigasi (bukan file fisik)
         try_files $uri $uri/ /index.html;
     }
 
-    # PROXY API KE PORT 5000
+    # Blokir akses langsung ke file source code jika tidak ditemukan, berikan 404
+    location ~* \.(tsx|ts|jsx)$ {
+        try_files $uri =404;
+        add_header Content-Type application/javascript;
+    }
+
+    # PROXY API KE BACKEND (PORT 5000)
     location /api/ {
         proxy_pass http://localhost:5000/;
         proxy_http_version 1.1;
@@ -47,7 +39,3 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 }
-
-# 3. Restart Nginx
-# sudo nginx -t
-# sudo systemctl restart nginx

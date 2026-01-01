@@ -1,44 +1,106 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import Layout from './components/Layout.tsx';
-import Dashboard from './components/Dashboard.tsx';
-import ResidentList from './components/ResidentList.tsx';
-import AiAssistant from './components/AiAssistant.tsx';
-import UserManagement from './components/UserManagement.tsx';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 import { apiService } from './services/apiService.ts';
 
+// --- KONFIGURASI ---
 const GOOGLE_CLIENT_ID = "770161612412-bb7dvaebdm97ml16fgmf2r9v4nmin6u0.apps.googleusercontent.com";
+const API_BASE_URL = window.location.hostname === 'localhost' ? "http://34.182.35.155.nip.io/api" : `${window.location.origin}/api`;
 
-const getApiUrl = () => {
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  if (isLocal) {
-    return "http://34.182.35.155.nip.io/api"; 
-  }
-  return `${window.location.origin}/api`;
+const Gender = { MALE: 'Laki-laki', FEMALE: 'Perempuan' };
+const ResidentStatus = { PERMANENT: 'Tetap', TEMPORARY: 'Pendatang/Kontrak' };
+
+// --- KOMPONEN: STAT CARD ---
+const StatCard = ({ title, value, icon, color }) => (
+  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+    <div className="flex justify-between items-start">
+      <div>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>
+        <p className="text-2xl font-bold text-slate-800">{value}</p>
+      </div>
+      <div className={`p-3 rounded-lg ${color}`}>{icon}</div>
+    </div>
+  </div>
+);
+
+// --- KOMPONEN: DASHBOARD ---
+const Dashboard = ({ residents }) => {
+  const stats = useMemo(() => {
+    const male = residents.filter(r => r.gender === Gender.MALE).length;
+    const female = residents.filter(r => r.gender === Gender.FEMALE).length;
+    const permanent = residents.filter(r => r.status === ResidentStatus.PERMANENT).length;
+    const temporary = residents.filter(r => r.status === ResidentStatus.TEMPORARY).length;
+    const rts = new Set(residents.map(r => r.rt_number)).size;
+
+    return { total: residents.length, rts, male, female, permanent, temporary };
+  }, [residents]);
+
+  const genderData = [
+    { name: 'Pria', value: stats.male, color: '#4f46e5' },
+    { name: 'Wanita', value: stats.female, color: '#ec4899' }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+        <h2 className="text-xl font-bold">Ringkasan Wilayah RW</h2>
+        <p className="text-indigo-100 text-sm mt-1">Data terkini kependudukan tingkat RW dan RT.</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <StatCard title="Total Warga" value={stats.total} color="bg-indigo-50" icon={<span className="text-indigo-600 font-bold">#</span>} />
+        <StatCard title="RT Aktif" value={stats.rts} color="bg-emerald-50" icon={<span className="text-emerald-600 font-bold">RT</span>} />
+        <StatCard title="Pria" value={stats.male} color="bg-blue-50" icon={<span className="text-blue-600 font-bold">L</span>} />
+        <StatCard title="Wanita" value={stats.female} color="bg-pink-50" icon={<span className="text-pink-600 font-bold">P</span>} />
+      </div>
+      <div className="bg-white p-6 rounded-xl border border-slate-200 h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie data={genderData} innerRadius={60} outerRadius={80} dataKey="value">
+              {genderData.map((e, i) => <Cell key={i} fill={e.color} />)}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
 };
 
-const API_BASE_URL = getApiUrl();
+// --- KOMPONEN: USER MANAGEMENT ---
+const UserManagement = ({ users, onVerify }) => (
+  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div className="p-4 border-b font-bold text-slate-700">Manajemen Akses RT</div>
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-slate-50 border-b">
+          <tr><th className="p-4">Nama</th><th className="p-4">Email</th><th className="p-4">Aksi</th></tr>
+        </thead>
+        <tbody>
+          {users.map(u => (
+            <tr key={u.id} className="border-b">
+              <td className="p-4 font-medium">{u.name}</td>
+              <td className="p-4 text-slate-500">{u.email}</td>
+              <td className="p-4 flex gap-2">
+                {u.status === 'PENDING' ? (
+                  <button onClick={() => onVerify(u.id, 'APPROVED', 'ADMIN_RT', '01')} className="bg-emerald-600 text-white px-3 py-1 rounded text-xs">Setujui</button>
+                ) : <span className="text-emerald-600 text-xs font-bold uppercase">{u.role}</span>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+);
 
-const parseJwt = (token) => {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-    }).join(''));
-    return JSON.parse(jsonPayload);
-  } catch (e) {
-    return null;
-  }
-};
-
+// --- KOMPONEN UTAMA: APP ---
 const App = () => {
   const [session, setSession] = useState(null);
   const [residents, setResidents] = useState([]);
   const [users, setUsers] = useState([]);
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(true);
-  const [apiError, setApiError] = useState(null);
   const googleBtnRef = useRef(null);
 
   useEffect(() => {
@@ -47,207 +109,64 @@ const App = () => {
   }, []);
 
   const loadData = async () => {
-    setIsLoading(true);
-    setApiError(null);
     try {
-      const [resData, userData] = await Promise.all([
-        apiService.getResidents(),
-        apiService.getUsers()
-      ]);
+      const [resData, userData] = await Promise.all([apiService.getResidents(), apiService.getUsers()]);
       setResidents(resData || []);
       setUsers(userData || []);
-    } catch (err) {
-      console.error("Koneksi API Gagal:", err);
-      setApiError(err.message || "Gagal terhubung ke Backend.");
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   };
 
   useEffect(() => {
-    if (!session && !isLoading) {
-      const initializeGoogle = () => {
-        const googleObj = window['google'];
-        if (googleObj && googleObj.accounts && googleObj.accounts.id) {
-          try {
-            googleObj.accounts.id.initialize({
-              client_id: GOOGLE_CLIENT_ID, 
-              callback: handleGoogleResponse,
-              auto_select: false
-            });
-
-            if (googleBtnRef.current) {
-              googleObj.accounts.id.renderButton(googleBtnRef.current, {
-                theme: "outline",
-                size: "large",
-                width: 320,
-                shape: "pill"
-              });
-            }
-          } catch (err) {
-            console.error("Google Auth Init Error", err);
-          }
-        } else {
-          setTimeout(initializeGoogle, 1000);
+    // Fix: Cast window to any to access the dynamically loaded 'google' property for identity services
+    if (!session && !isLoading && (window as any).google) {
+      (window as any).google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (res: any) => {
+          const payload = JSON.parse(atob(res.credential.split('.')[1]));
+          apiService.loginWithGoogle(payload.email, payload.name, payload.picture).then(setSession);
         }
-      };
-      initializeGoogle();
+      });
+      (window as any).google.accounts.id.renderButton(googleBtnRef.current, { theme: "outline", size: "large", shape: "pill" });
     }
   }, [session, isLoading]);
 
-  const handleGoogleResponse = async (response) => {
-    try {
-      const userData = parseJwt(response.credential);
-      if (userData) {
-        const { email, name, picture } = userData;
-        const user = await apiService.loginWithGoogle(email, name, picture);
-        setSession(user);
-        const updatedUsers = await apiService.getUsers();
-        setUsers(updatedUsers);
-      }
-    } catch (err) {
-      alert("Login Gagal. Cek koneksi Backend di VM.");
-    }
-  };
-
-  const handleVerifyUser = async (userId, status, role, rt) => {
-    try {
-      const updatedUsers = await apiService.updateUserStatus(userId, status, role, rt);
-      setUsers(updatedUsers);
-    } catch (err) {
-      alert("Gagal memproses verifikasi.");
-    }
-  };
-
-  const handleLogout = () => {
-    setSession(null);
-    setCurrentPage('dashboard');
-  };
-
-  const handleAddResident = async (data) => {
-    try {
-      const newResident = await apiService.addResident(data);
-      setResidents(prev => [...prev, newResident]);
-    } catch (err) {
-      alert("Gagal menyimpan data ke DB VM.");
-    }
-  };
-
-  const handleUpdateResident = async (id, updates) => {
-    try {
-      const updatedResident = await apiService.updateResident(id, updates);
-      setResidents(prev => prev.map(r => r.id === id ? updatedResident : r));
-    } catch (err) {
-      alert("Gagal memperbarui data.");
-    }
-  };
-
-  const handleDeleteResident = async (id) => {
-    if (confirm('Hapus data warga ini secara permanen?')) {
-      try {
-        await apiService.deleteResident(id);
-        setResidents(prev => prev.filter(r => r.id !== id));
-      } catch (err) {
-        alert("Gagal menghapus data.");
-      }
-    }
-  };
-
-  const filteredResidents = useMemo(() => {
-    if (!session) return [];
-    if (session.role === 'ADMIN_RT') {
-      return residents.filter(r => r.rt_number === session.rtNumber);
-    }
-    return residents;
-  }, [residents, session]);
-
   if (!session) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-6 text-slate-800">
-        <div className="bg-white rounded-3xl shadow-xl w-full max-w-md p-8 border border-slate-200">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-indigo-600 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-            </div>
-            <h1 className="text-2xl font-bold">SIM-RW Digital</h1>
-            <p className="text-slate-500 text-sm mt-1">Platform Manajemen Kependudukan</p>
-          </div>
-
-          <div className="space-y-6">
-            <div ref={googleBtnRef} className="flex justify-center min-h-[50px]"></div>
-            
-            <div className={`p-4 rounded-2xl border ${apiError ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-200'}`}>
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`w-2 h-2 rounded-full ${residents.length > 0 ? 'bg-emerald-500' : (apiError ? 'bg-red-500 animate-pulse' : 'bg-amber-500')}`}></div>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Koneksi Backend VM</p>
-              </div>
-              <code className="text-[10px] text-indigo-600 break-all bg-white px-2 py-1 rounded border block mb-1">
-                {API_BASE_URL}
-              </code>
-              <p className="text-[9px] text-slate-500">
-                {residents.length > 0 
-                  ? "✅ Server Online & Database Terhubung" 
-                  : (apiError ? `❌ Error: ${apiError}` : "⌛ Mencoba menghubungkan ke server...")}
-              </p>
-            </div>
-
-            <button
-              onClick={() => {
-                const admin = users.find(u => u.email === 'admin@rw.com');
-                if (admin) setSession(admin);
-                else alert("Data demo belum siap atau server backend mati.");
-              }}
-              className="w-full py-3 text-sm bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold hover:bg-indigo-100 rounded-xl transition-all"
-            >
-              Gunakan Akses Demo (Bypass)
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (session.status === 'PENDING') {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
-        <div className="bg-white rounded-3xl shadow-xl w-full max-w-lg p-10 border border-slate-200">
-          <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">Pendaftaran Terkirim</h1>
-          <p className="text-slate-600 mb-8 font-medium">Halo {session.name}, akun Anda sudah masuk antrean sistem VM. Silakan informasikan ke Admin RW untuk verifikasi RT.</p>
-          <button onClick={handleLogout} className="px-8 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all">Keluar</button>
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-3xl shadow-xl w-full max-sm text-center border">
+          <h1 className="text-2xl font-bold mb-2">SIM-RW Digital</h1>
+          <p className="text-slate-500 text-sm mb-8">Silakan Login untuk Akses Data</p>
+          <div ref={googleBtnRef} className="flex justify-center mb-6"></div>
+          <button onClick={() => setSession(users[0])} className="text-xs text-indigo-600 font-bold hover:underline">Gunakan Akses Demo</button>
         </div>
       </div>
     );
   }
 
   return (
-    <Layout session={session} onLogout={handleLogout} currentPage={currentPage} setCurrentPage={setCurrentPage}>
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center h-64 gap-3">
-          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-xs text-slate-400 font-medium">Memuat data dari server VM...</p>
-        </div>
-      ) : (
-        <>
-          {currentPage === 'dashboard' && <Dashboard residents={filteredResidents} />}
-          {currentPage === 'residents' && (
-            <ResidentList 
-              residents={residents} 
-              session={session} 
-              onAdd={handleAddResident}
-              onDelete={handleDeleteResident}
-              onUpdate={handleUpdateResident}
-            />
-          )}
-          {currentPage === 'users' && session.role === 'ADMIN_RW' && (
-            <UserManagement users={users} onVerify={handleVerifyUser} />
-          )}
-          {currentPage === 'ai-assistant' && <AiAssistant residents={filteredResidents} />}
-        </>
-      )}
-    </Layout>
+    <div className="flex h-screen bg-slate-50">
+      <aside className="w-64 bg-indigo-900 text-white p-6 flex flex-col gap-8">
+        <h1 className="font-bold text-xl">SIM-RW</h1>
+        <nav className="flex flex-col gap-2">
+          <button onClick={() => setCurrentPage('dashboard')} className={`p-3 rounded-lg text-left text-sm ${currentPage === 'dashboard' ? 'bg-indigo-700' : 'hover:bg-indigo-800'}`}>Dashboard</button>
+          <button onClick={() => setCurrentPage('residents')} className={`p-3 rounded-lg text-left text-sm ${currentPage === 'residents' ? 'bg-indigo-700' : 'hover:bg-indigo-800'}`}>Data Warga</button>
+          {session.role === 'ADMIN_RW' && <button onClick={() => setCurrentPage('users')} className={`p-3 rounded-lg text-left text-sm ${currentPage === 'users' ? 'bg-indigo-700' : 'hover:bg-indigo-800'}`}>Verifikasi User</button>}
+        </nav>
+        <button onClick={() => setSession(null)} className="mt-auto p-3 text-indigo-300 text-sm hover:text-white">Keluar</button>
+      </aside>
+      <main className="flex-1 p-8 overflow-y-auto">
+        {currentPage === 'dashboard' && <Dashboard residents={residents} />}
+        {currentPage === 'users' && <UserManagement users={users} onVerify={(id, s, r, rt) => apiService.updateUserStatus(id, s, r, rt).then(loadData)} />}
+        {currentPage === 'residents' && (
+          <div className="bg-white p-6 rounded-xl border">
+             <h3 className="font-bold mb-4">Daftar Warga Terdaftar</h3>
+             <div className="space-y-2">
+               {residents.map(r => <div key={r.id} className="p-3 bg-slate-50 rounded border text-sm">{r.name} - RT {r.rt_number} ({r.status})</div>)}
+             </div>
+          </div>
+        )}
+      </main>
+    </div>
   );
 };
 

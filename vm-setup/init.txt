@@ -1,0 +1,48 @@
+-- SCRIPT INISIALISASI DATABASE POSTGRESQL (SIM-RW) - VERSI LENGKAP
+-- Jalankan perintah ini di dalam PostgreSQL:
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+CREATE TABLE IF NOT EXISTS residents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nik VARCHAR(16) UNIQUE NOT NULL,
+    no_kk VARCHAR(16) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    rt_number VARCHAR(10) NOT NULL,
+    address TEXT,
+    gender VARCHAR(20),
+    birth_place VARCHAR(100),
+    birth_date DATE,
+    occupation VARCHAR(100),
+    family_relationship VARCHAR(50),
+    status VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    avatar TEXT,
+    role VARCHAR(20) DEFAULT 'ADMIN_RT',
+    status VARCHAR(20) DEFAULT 'PENDING',
+    rt_number VARCHAR(10),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO users (email, name, role, status, avatar)
+VALUES (
+    'admin@rw.com', 
+    'Admin RW Utama', 
+    'ADMIN_RW', 
+    'APPROVED', 
+    'https://ui-avatars.com/api/?name=RW&background=4f46e5&color=fff'
+)
+ON CONFLICT (email) DO NOTHING;
+
+-- Contoh Data Warga dengan Kolom Lengkap
+INSERT INTO residents (nik, no_kk, name, rt_number, address, gender, birth_place, birth_date, occupation, family_relationship, status)
+VALUES 
+('3271000000000001', '3271000000008888', 'Budi Santoso', '01', 'Jl. Merdeka No. 10', 'Laki-laki', 'Jakarta', '1985-05-12', 'Wiraswasta', 'Kepala Keluarga', 'Tetap'),
+('3271000000000002', '3271000000008888', 'Siti Aminah', '01', 'Jl. Merdeka No. 10', 'Perempuan', 'Bandung', '1990-08-22', 'Guru', 'Istri', 'Tetap')
+ON CONFLICT (nik) DO NOTHING;

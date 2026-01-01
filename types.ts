@@ -15,12 +15,15 @@ export enum ResidentStatus {
 export interface Resident {
   id: string;
   nik: string;
+  no_kk: string;
   name: string;
   rt_number: string;
   address: string;
   gender: Gender;
+  birth_place: string;
   birth_date: string;
   occupation: string;
+  family_relationship: string;
   status: ResidentStatus;
   created_at: string;
 }
